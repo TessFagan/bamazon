@@ -8,8 +8,7 @@ let productChoice = 0;
 let numUnits = 0;
 let data = [];
 let inquirerFinished = false;
-let data1 = []
-let productAvailable = false;
+let data1 = [];
 
 // MySQL DB Connection Information:
 var connection = mysql.createConnection({
@@ -35,7 +34,6 @@ function afterConnection() {
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
         data = res
-        console.log(data.length)
 
         array = [["Product ID", "Product Name", "Department", "Price", "Quantity"]]
 
@@ -115,10 +113,10 @@ function checkInventory(numUnits, data1) {
 
     if (+numUnits <= +data1[0].stock_quantity) {
         console.log("enough units in inventory")
-        productAvailable = true
+
         currentQuantity = +data1[0].stock_quantity
         console.log(currentQuantity)
-        fulfill()
+        fulfill(currentQuantity, productChoice, numUnits, data1)
     }
 
     else {
@@ -131,32 +129,17 @@ function checkInventory(numUnits, data1) {
 // if yes, execute
 // if no, say out of stock
 
-function fulfill(productAvailable, currentQuantity, productChoice, numUnits) {
+function fulfill(currentQuantity, productChoice, numUnits, data1) {
 
-    if (productAvailable === true) {
-        console.log("Updating quantities...\n");
-
-        var query = connection.query(
-            "UPDATE products WHERE ?",
-            [
-                {
-                    item_id: productChoice
-                },
-                {
-                    stock_quantity: currentQuantity - numUnits
-                ]
-            function (err, res) {
-                if (err) throw err;
-                console.log(res.affectedRows + " products updated!\n");
-            }
-        );
-
-        // logs the actual query being run
-        console.log(query.sql);
-    }
-}
+    console.log("Updating quantities..");
 
 
+    var newQuantity = currentQuantity - numUnits
+    var cost = numUnits * data1[0].price
 
-connection.end();
+    var query = `UPDATE products SET stock_quantity = ${newQuantity} WHERE item_id =${productChoice}`
+    connection.query(query)
+
+    console.log(`Purchase completed! your total cost was: ${cost}`)
+    connection.end();
 }
