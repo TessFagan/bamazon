@@ -24,3 +24,6 @@ INSERT INTO products (product_name, department_name, price, stock_quantity) valu
 
 SHOW TABLES;
 SELECT * FROM products
+
+SELECT * FROM products
+WHERE item_id = ?;

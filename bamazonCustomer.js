@@ -2,8 +2,14 @@ const inquirer = require("inquirer")
 const output = require("pretty-columns").output
 const mysql = require("mysql")
 
-var productArray = []
-var displayComplete = false
+var array = [];
+var displayComplete = false;
+let productChoice = 0;
+let numUnits = 0;
+let data = [];
+let inquirerFinished = false;
+let data1 = []
+let productAvailable = false;
 
 // MySQL DB Connection Information:
 var connection = mysql.createConnection({
@@ -28,9 +34,10 @@ function afterConnection() {
     console.log("Welcome to Bamazon")
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
-        var data = res
+        data = res
+        console.log(data.length)
 
-        let array = [["Product ID", "Product Name", "Department", "Price", "Quantity"]]
+        array = [["Product ID", "Product Name", "Department", "Price", "Quantity"]]
 
         data.forEach(element => {
             let string = [`${element.item_id}`, `${element.product_name}`, `${element.department_name}`, `${element.price}`, `${element.stock_quantity}`]
@@ -44,17 +51,10 @@ function afterConnection() {
             suffix: ' |',
         });
 
-        connection.end();
         displayComplete = true;
         runInquirer()
     })
 }
-
-
-function purchase() {
-
-}
-
 
 function runInquirer() {
 
@@ -76,10 +76,87 @@ function runInquirer() {
 
             .then(function (inquirerResponse) {
                 console.log(inquirerResponse)
-                let productChoice = inquirerResponse.productChoice
-                let numUnits = inquirerResponse.numUnits
+                productChoice = inquirerResponse.productChoice
+                numUnits = inquirerResponse.numUnits
                 console.log(productChoice + " " + numUnits)
+
+                inquirerFinished = true;
+                if (inquirerFinished === true) {
+                    purchase(data, productChoice, numUnits)
+                }
+
             });
     }
     displayComplete = false;
+}
+
+function purchase(data, productChoice, numUnits) {
+
+    console.log("purchase function going")
+
+    // check if product id exists
+    for (let i = 0; i < data.length; i++) {
+        if (data[i].item_id === +productChoice) {
+            console.log("true")
+
+            console.log("query inventory")
+
+            var query = `SELECT * FROM products WHERE item_id =${productChoice}`
+            connection.query(query, function (err, res) {
+                if (err) throw err;
+                data1 = res
+                checkInventory(numUnits, data1)
+            })
+        }
+    }
+}
+
+function checkInventory(numUnits, data1) {
+
+    if (+numUnits <= +data1[0].stock_quantity) {
+        console.log("enough units in inventory")
+        productAvailable = true
+        currentQuantity = +data1[0].stock_quantity
+        console.log(currentQuantity)
+        fulfill()
+    }
+
+    else {
+        console.log("not enough units to fill your order")
+    }
+
+}
+// match product id to product
+// check if units are available
+// if yes, execute
+// if no, say out of stock
+
+function fulfill(productAvailable, currentQuantity, productChoice, numUnits) {
+
+    if (productAvailable === true) {
+        console.log("Updating quantities...\n");
+
+        var query = connection.query(
+            "UPDATE products WHERE ?",
+            [
+                {
+                    item_id: productChoice
+                },
+                {
+                    stock_quantity: currentQuantity - numUnits
+                ]
+            function (err, res) {
+                if (err) throw err;
+                console.log(res.affectedRows + " products updated!\n");
+            }
+        );
+
+        // logs the actual query being run
+        console.log(query.sql);
+    }
+}
+
+
+
+connection.end();
 }
